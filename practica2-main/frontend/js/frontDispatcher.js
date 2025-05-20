@@ -15,7 +15,9 @@ document.addEventListener('DOMContentLoaded', () =>
     const optioncategory= document.getElementById('type'); //para poder usar el mismo js para modulos futuros, no funciona todavía
 
     // Leer todos los estudiantes al cargar
-    fetchStudents();
+    fetchStudents(); //prueba de git 
+
+    
 
     // Formulario: Crear o actualizar estudiante
     studentForm.addEventListener('submit', async (e) => {
