@@ -1,13 +1,17 @@
 <!-- frontend/index.html -->
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gestión de Estudiantes</title>
-  <link rel="stylesheet" href="css/w3.css" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" type="image/png" sizes="32x32" href="../img/favicon.png">
+  <link rel="stylesheet" href="../css/w3.css" />
+  <link rel="stylesheet" href="../css/styles.css" />
+  <script type="module" src="../js/controllers/studentsController.js"></script>
 </head>
+
 <body class="w3-container">
 
   <h2 class="w3-center w3-margin-top">Gestión de Estudiantes</h2>
@@ -27,13 +31,6 @@
       <div class="w3-third">
         <label>Edad</label>
         <input class="w3-input" type="number" id="age" required />
-      </div>
-      <div>
-        <label>Tipo</label>
-        <select id="type">
-          <option value="student">student</option>
-          <option value="professor">professor</option>
-        </select>       
       </div>
     </div>
 
@@ -55,6 +52,9 @@
     <tbody id="studentTableBody"></tbody>
   </table>
 
-  <script src="js/frontDispatcher.js"></script>
+  <footer class="w3-center w3-margin-top">
+    <a class="w3-btn w3-black" href="../index.html">Volver al Panel Principal</a>
+  </footer>
+  
 </body>
 </html>
