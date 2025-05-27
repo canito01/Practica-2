@@ -58,7 +58,16 @@ function setupFormHandler()
                 await studentsSubjectsAPI.update(relation);
             } 
             else 
-            {
+            {   
+                 //traer todas las relaciones actuales
+                const allRelations = await studentsSubjectsAPI.fetchAll();
+                // Buscar si ya existe una con ese estudiante y esa materia
+                const alreadyExists = allRelations.some(r => r.student_id === relation.student_id && r.subject_id === relation.subject_id);
+                 if (alreadyExists) 
+                {
+                    alert('La relación entre ese estudiante y materia ya existe.');
+                    return;
+                }
                 await studentsSubjectsAPI.create(relation);
             }
             clearForm();
@@ -66,7 +75,14 @@ function setupFormHandler()
         } 
         catch (err) 
         {
-            console.error('Error guardando relación:', err.message);
+            if (err instanceof Response) {
+                const res = await err.json();
+                 if (res.error) {
+                    alert(res.error);  // ← muestra el mensaje del backend
+            }
+            } else {
+                 console.error('Error guardando relación:', err.message);
+                  }      
         }
     });
 }

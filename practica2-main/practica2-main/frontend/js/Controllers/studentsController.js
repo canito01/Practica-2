@@ -121,8 +121,17 @@ async function confirmDelete(id)
   
     try 
     {
-        await studentsAPI.remove(id);
-        loadStudents();
+               const existingRelations = await studentsSubjectsAPI.fetchAll();
+               const StudenttIsRelated= existingRelations.some(rel => rel.student_id === id);    
+       
+               if (StudentIsRelated)
+               {
+                   alert('No se puede borrar el estudiante porque tiene historial academico.');
+                   return; //frena la ejecución si hay materias cargadas 
+               }
+               // Si no hay materias cargadas, procede a borrar el estudiante
+               await studentsAPI.remove(id);
+               loadStudents();
     } 
     catch (err) 
     {
@@ -130,3 +139,4 @@ async function confirmDelete(id)
     }
 }
   
+
