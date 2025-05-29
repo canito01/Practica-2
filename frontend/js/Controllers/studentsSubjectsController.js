@@ -59,6 +59,7 @@ function setupFormHandler()
             } 
             else 
             {   
+                
                  //traer todas las relaciones actuales
                 const allRelations = await studentsSubjectsAPI.fetchAll();
                 // Buscar si ya existe una con ese estudiante y esa materia

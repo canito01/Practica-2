@@ -1,0 +1,825 @@
+[1mdiff --git a/backend/config/script_inicial.sql b/backend/config/script_inicial.sql[m
+[1mindex 5e24a0d..5743719 100644[m
+[1m--- a/backend/config/script_inicial.sql[m
+[1m+++ b/backend/config/script_inicial.sql[m
+[36m@@ -29,41 +29,6 @@[m [mINSERT INTO students (fullname, email, age) VALUES[m
+ ('Lucas Torres', 'lucas@example.com', 24),[m
+ ('Marina Díaz', 'marina@example.com', 22);[m
+ [m
+[31m---Crear la tabla subjects[m
+[31m-CREATE TABLE subjects ([m
+[31m-    id INT AUTO_INCREMENT PRIMARY KEY,[m
+[31m-    name VARCHAR(100) NOT NULL UNIQUE[m
+[31m-) ENGINE=INNODB;[m
+[31m-[m
+[31m---Insertar materias de prueba[m
+[31m-INSERT INTO subjects (name) VALUES [m
+[31m-('Tecnologías A'), [m
+[31m-('Tecnologías B'), [m
+[31m-('Algoritmos y Estructura de Datos I'), [m
+[31m-('Fundamentos de Informática');[m
+[31m-[m
+[31m---Crear TABLA INTERMEDIA students_subjects[m
+[31m---Clave primaria compuesta (student_id, subject_id): garantiza que un estudiante[m
+[31m--- no tenga dos veces la misma materia.[m
+[31m-[m
+[31m---approved: si está aprobada la materia o no (por defecto FALSE).[m
+[31m-[m
+[31m---ON DELETE CASCADE: si eliminás un estudiante o materia, se borra[m
+[31m--- su asignación automáticamente.[m
+[31m-CREATE TABLE students_subjects ([m
+[31m-    id INT AUTO_INCREMENT PRIMARY KEY,[m
+[31m-    student_id INT NOT NULL,[m
+[31m-    subject_id INT NOT NULL,[m
+[31m-    approved BOOLEAN DEFAULT FALSE,[m
+[31m-    UNIQUE (student_id, subject_id),[m
+[31m-    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,[m
+[31m-    FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE[m
+[31m-) ENGINE=INNODB;[m
+[31m-[m
+[31m---Insertar relaciones de prueba students_subjects[m
+[31m-INSERT INTO students_subjects (student_id, subject_id, approved) VALUES[m
+[31m-(1, 1, 1),[m
+[31m-(2, 2, 0);[m
+ [m
+ --VOLVER TODO A CERO, BORRAR BASE DE DATOS Y USUARIO[m
+ --REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'students_user'@'localhost';[m
+[1mdiff --git a/backend/config/testconexion.php b/backend/config/testconexion.php[m
+[1mnew file mode 100644[m
+[1mindex 0000000..b2413b6[m
+[1m--- /dev/null[m
+[1m+++ b/backend/config/testconexion.php[m
+[36m@@ -0,0 +1,9 @@[m
+[32m+[m[32m<?php[m
+[32m+[m[32mrequire_once("./config/databaseConfig.php");[m
+[32m+[m
+[32m+[m[32mif ($conn) {[m
+[32m+[m[32m    echo "✅ Conexión exitosa.";[m
+[32m+[m[32m} else {[m
+[32m+[m[32m    echo "❌ No se pudo conectar.";[m
+[32m+[m[32m}[m
+[32m+[m[32m?>[m
+\ No newline at end of file[m
+[1mdiff --git a/backend/controllers/studentsController.php b/backend/controllers/studentsController.php[m
+[1mindex 079ce2f..f6b8654 100644[m
+[1m--- a/backend/controllers/studentsController.php[m
+[1m+++ b/backend/controllers/studentsController.php[m
+[36m@@ -1,6 +1,4 @@[m
+ <?php[m
+[31m-//este archivo se encarga de manejar las peticiones HTTP relacionadas con los estudiantes[m
+[31m-//se mantiene igual en el nuevo crud[m
+ require_once("./models/students.php");[m
+ [m
+ function handleGet($conn) {[m
+[36m@@ -39,19 +37,21 @@[m [mfunction handlePut($conn) {[m
+ [m
+ function handleDelete($conn) {[m
+     $input = json_decode(file_get_contents("php://input"), true);[m
+[32m+[m
+     $studentId = $input['student_id'];[m
+[31m-    $stmt = $conn->prepare("SELECT 1 FROM students_subjects WHERE student_id = ? ");[m
+[31m-    $stmt->bind_param("i", $studentId);[m
+[32m+[m[32m    $stmt = $conn->prepare("SELECT 1 FROM student_subject WHERE student_id = ?");[m
+[32m+[m[32m    $stmt->bind_param("i", $studentId);[m[41m [m
+     $stmt->execute();[m
+     $result = $stmt->get_result();[m
+ [m
+[31m-    if ($result->num_rows > 0) {[m
+[32m+[m[32m    if( $result->num_rows > 0)[m[41m [m
+[32m+[m[32m    {[m
+         http_response_code(400);[m
+[31m-        echo json_encode(["error" => "No se puede eliminar porque el estudiante tiene materias asignadas"]);[m
+[32m+[m[32m        echo json_encode(["error" => "No se puede eliminar el estudiante porque está asignado a por lo menos una materia"]);[m
+         return;[m
+     }[m
+[32m+[m[32m    // Si no hay materias asignadas, proceder a eliminar el estudiante[m
+ [m
+[31m-    // Si no hay materias asignadas, procede a eliminar el estudiante[m
+     if (deleteStudent($conn, $input['id'])) {[m
+         echo json_encode(["message" => "Eliminado correctamente"]);[m
+     } else {[m
+[1mdiff --git a/backend/controllers/studentsSubjectsController.php b/backend/controllers/studentsSubjectsController.php[m
+[1mindex aab2cc1..7b62f34 100644[m
+[1m--- a/backend/controllers/studentsSubjectsController.php[m
+[1m+++ b/backend/controllers/studentsSubjectsController.php[m
+[36m@@ -1,6 +1,4 @@[m
+ <?php[m
+[31m-//este archivo hace lo mismo que el studentsController.php pero para la tabla studentsSubjects[m
+[31m-//las funciones son identicas excepto por el nombre de la tabla y los nombres de las columnas[m
+ require_once("./models/studentsSubjects.php");[m
+ [m
+ function handleGet($conn) [m
+[36m@@ -22,26 +20,19 @@[m [mfunction handlePost($conn)[m
+     $subjectId = $input['subject_id'];[m
+     $approved = $input['approved'];[m
+ [m
+[31m-    // Verificar si ya existe una asignación con el mismo estudiante y materia[m
+[31m-    $stmt = $conn->prepare("SELECT * FROM students_subjects WHERE student_id = ? AND subject_id = ?"); [m
+[31m-    /** [m
+[31m-     * el ? es un placeholder, para valores que se pasarán más adelante[m
+[31m-     * el ? es para declarar un parámetro que se pasará más adelante[m
+[31m-     * esto ayuda a evitar inyecciones sql ya que solo permite datos de tipo entero[m
+[31m-    */ [m
+[31m-[m
+[32m+[m[32m    //verificar si ya existe esa relación[m
+[32m+[m[32m    $stmt = $conn->prepare("SELECT 1 FROM student_subject WHERE student_id = ? AND subject_id = ?");[m
+     $stmt->bind_param("ii", $studentId, $subjectId); //asociamos los parametros a la consulta preparada[m
+     $stmt->execute();[m
+     $result = $stmt->get_result();[m
+ [m
+[31m-    if ($result->num_rows > 0) //significa que encontró una relación existente[m
+[32m+[m[32m    if ($result->num_rows > 0)[m[41m [m
+     {[m
+         http_response_code(400);[m
+[31m-        echo json_encode(["error" => "Ya existe una relación entre este estudiante y materia"]);[m
+[32m+[m[32m        echo json_encode(["error" => "La relación entre el estudiante y la materia ya existe"]);[m
+         return;[m
+     }[m
+[31m-    // si no existe, procede a crear la asignación[m
+[31m-[m
+[32m+[m[41m    [m
+     if (assignSubjectToStudent($conn, $input['student_id'], $input['subject_id'], $input['approved'])) [m
+     {[m
+         echo json_encode(["message" => "Asignación realizada"]);[m
+[1mdiff --git a/backend/controllers/subjectsController.php b/backend/controllers/subjectsController.php[m
+[1mindex 5b9bb0a..6a4a854 100644[m
+[1m--- a/backend/controllers/subjectsController.php[m
+[1m+++ b/backend/controllers/subjectsController.php[m
+[36m@@ -1,15 +1,15 @@[m
+ <?php[m
+[31m-//este archivo hace lo mismo que el studentsController.php pero para la tabla subjects[m
+[31m-//las funciones son identicas excepto por el nombre de la tabla y los nombres de las columnas[m
+[31m-//se podrán estandarizar de alguna forma?[m
+ require_once("./models/subjects.php");[m
+ [m
+ function handleGet($conn) [m
+ {[m
+[31m-    if (isset($_GET['id'])){[m
+[32m+[m[32m    if (isset($_GET['id']))[m[41m [m
+[32m+[m[32m    {[m
+         $result = getSubjectById($conn, $_GET['id']);[m
+         echo json_encode($result->fetch_assoc());[m
+[31m-    } else{[m
+[32m+[m[32m    }[m[41m [m
+[32m+[m[32m    else[m[41m [m
+[32m+[m[32m    {[m
+         $result = getAllSubjects($conn);[m
+         $data = [];[m
+         while ($row = $result->fetch_assoc()) [m
+[36m@@ -20,26 +20,39 @@[m [mfunction handleGet($conn)[m
+     }[m
+ }[m
+ [m
+[32m+[m[32m/*function handlePost($conn)[m[41m [m
+[32m+[m[32m{[m
+[32m+[m[32m    $input = json_decode(file_get_contents("php://input"), true);[m
+[32m+[m[32m    if (createSubject($conn, $input['name']))[m[41m [m
+[32m+[m[32m    {[m
+[32m+[m[32m        echo json_encode(["message" => "Materia creada correctamente"]);[m
+[32m+[m[32m    }[m[41m [m
+[32m+[m[32m    else[m[41m [m
+[32m+[m[32m    {[m
+[32m+[m[32m        http_response_code(500);[m
+[32m+[m[32m        echo json_encode(["error" => "No se pudo crear"]);[m
+[32m+[m[32m    }[m
+[32m+[m[32m}*/[m
+ function handlePost($conn) [m
+ {[m
+     $input = json_decode(file_get_contents("php://input"), true);[m
+[31m-[m
+     $nombre = $input['name'];[m
+[31m-    //stmt es una variable que contiene la consulta sql preparada[m
+[31m-    $stmt = $conn->prepare("SELECT * FROM subjects WHERE  LOWER(name) = LOWER(?)"); //ve[m
+[31m-    //la funcion lower convierte el texto a minusculas para evitar problemas de mayusculas y minusculas[m
+[31m-    $stmt->bind_param("s", $nombre);//ayuda a evitar inyecciones sql ya que solo permite datos de tipo string[m
+[32m+[m[32m    //stmt es una variable que contiene la consulta preparada[m
+[32m+[m[32m    $stmt = $conn->prepare("SELECT id FROM subjects WHERE LOWER(name) = LOWER(?)");  // Verificar si ya existe una materia con ese nombre[m[41m [m
+[32m+[m[32m    //la funcion lower convierte el nombre a minusculas para evitar problemas de mayusculas y minusculas[m
+[32m+[m[32m    $stmt->bind_param("s", $nombre); // ayuda a evitar inyecciones SQL ya que solo se permite un string como parametro[m
+     $stmt->execute();[m
+[31m-    $result = $stmt->get_result(); //objeto de tipo mysqli , permite acceder a los resultados de la consulta[m
+[32m+[m[32m    $result = $stmt->get_result();[m
+ [m
+[31m-    if ($result->num_rows > 0) //encontró una materia con ese nombre (en realidad una coincidencia)[m
+[32m+[m[32m    if ($result->num_rows > 0) //encontro una coincidencia[m
+     {[m
+[31m-        http_response_code(400);[m
+[32m+[m[32m        http_response_code(400);[m[41m [m
+         echo json_encode(["error" => "Ya existe una materia con ese nombre"]);[m
+         return;[m
+     }[m
+ [m
+[31m-    if (createSubject($conn, $input['name']))  //si no existe crearla[m
+[32m+[m
+[32m+[m[32m    if (createSubject($conn, $nombre)) // si no existe, crearla[m
+     {[m
+         echo json_encode(["message" => "Materia creada correctamente"]);[m
+     } [m
+[36m@@ -67,21 +80,6 @@[m [mfunction handlePut($conn)[m
+ function handleDelete($conn) [m
+ {[m
+     $input = json_decode(file_get_contents("php://input"), true);[m
+[31m-[m
+[31m-    $subjectId = $input['subject_id'];[m
+[31m-    $stmt = $conn->prepare("SELECT 1 FROM students_subjects WHERE subject_id = ?"); [m
+[31m-    //hace select 1 y no select * porque no importa que columnas tenga la tabla, solo nos interesa si hay o no registros con ese id[m
+[31m-    $stmt->bind_param("i", $subjectId); //asociamos el parametro a la consulta preparada[m
+[31m-    $stmt->execute();[m
+[31m-    $result = $stmt->get_result();[m
+[31m-[m
+[31m-    if ($result->num_rows > 0) //significa que encontró una relación existente[m
+[31m-    {[m
+[31m-        http_response_code(400);[m
+[31m-        echo json_encode(["error" => "No se puede eliminarla materia porque hay estudiantes asignados a esta materia"]);[m
+[31m-        return;[m
+[31m-    }[m
+[31m-    // si no hay estudiantes asignados, procede a eliminar la materia[m
+     if (deleteSubject($conn, $input['id'])) [m
+     {[m
+         echo json_encode(["message" => "Materia eliminada correctamente"]);[m
+[1mdiff --git a/backend/models/students.php b/backend/models/students.php[m
+[1mindex 95157a3..b2e25eb 100644[m
+[1m--- a/backend/models/students.php[m
+[1m+++ b/backend/models/students.php[m
+[36m@@ -1,6 +1,6 @@[m
+ <?php[m
+ //archivo que maneja, a partir de comando sql, la tabla students, agregar, eliminar, consultar y modificar[m
+[31m-//en la nueva version del crud este tambien se mantiene igual[m
+[32m+[m
+ function getAllStudents($conn) {[m
+     $sql = "SELECT * FROM students";[m
+     return $conn->query($sql);[m
+[1mdiff --git a/backend/models/studentsSubjects.php b/backend/models/studentsSubjects.php[m
+[1mindex 77bf3b0..f0eb090 100644[m
+[1m--- a/backend/models/studentsSubjects.php[m
+[1m+++ b/backend/models/studentsSubjects.php[m
+[36m@@ -1,5 +1,4 @@[m
+ <?php[m
+[31m-// archivo que maneja, a partir de comando sql, la tabla students_subjects, agregar, eliminar, consultar y modificar[m
+ function assignSubjectToStudent($conn, $student_id, $subject_id, $approved) [m
+ {[m
+     $sql = "INSERT INTO students_subjects (student_id, subject_id, approved) VALUES (?, ?, ?)";[m
+[1mdiff --git a/backend/models/subjects.php b/backend/models/subjects.php[m
+[1mindex 5810107..f90d44f 100644[m
+[1m--- a/backend/models/subjects.php[m
+[1m+++ b/backend/models/subjects.php[m
+[36m@@ -1,5 +1,4 @@[m
+ <?php[m
+[31m-// archivo que maneja, a partir de comando sql, la tabla subjects, agregar, eliminar, consultar y modificar[m
+ function getAllSubjects($conn) [m
+ {[m
+     $sql = "SELECT * FROM subjects";[m
+[1mdiff --git a/backend/notes.txt b/backend/notes.txt[m
+[1mdeleted file mode 100644[m
+[1mindex 0e7b97d..0000000[m
+[1m--- a/backend/notes.txt[m
+[1m+++ /dev/null[m
+[36m@@ -1,15 +0,0 @@[m
+[31m-atributo pattern html[m
+[31m-usa expresiones regulares[m
+[31m-patern-title-required[m
+[31m-[m
+[31m-como validar algo en el frontend? -->[m
+[31m-[m
+[31m-siempre va a ser lo que no cambia, encapsularlo porque tiene reuso (la api y routes factory por ejemplo)[m
+[31m-[m
+[31m-abstraccion es un concepto a partir del cual filtramos aquello que no es importante[m
+[31m-[m
+[31m-buscar como subir/agregar archivos[m
+[31m-[m
+[31m-validacion q vaya hasta el bcend y vuelva[m
+[31m-[m
+[31m-autenticacion autorizacion accounting[m
+[1mdiff --git a/backend/routes/routesFactory.php b/backend/routes/routesFactory.php[m
+[1mindex 6b95793..a54cc86 100644[m
+[1m--- a/backend/routes/routesFactory.php[m
+[1m+++ b/backend/routes/routesFactory.php[m
+[36m@@ -1,12 +1,11 @@[m
+ <?php[m
+[31m-//enruta las peticiones HTTP a los handlers correspondientes[m
+[31m-function routeRequest($conn, $customHandlers = [], $prefix = 'handle') //recibe un array de handlers personalizados [m
+[32m+[m[32mfunction routeRequest($conn, $customHandlers = [], $prefix = 'handle')[m[41m [m
+ {[m
+     $method = $_SERVER['REQUEST_METHOD'];[m
+ [m
+     // Lista de handlers CRUD por defecto[m
+     $defaultHandlers = [[m
+[31m-        'GET'    => $prefix . 'Get', //necesita el $prefix para los proximos customizados[m
+[32m+[m[32m        'GET'    => $prefix . 'Get',[m
+         'POST'   => $prefix . 'Post',[m
+         'PUT'    => $prefix . 'Put',[m
+         'DELETE' => $prefix . 'Delete'[m
+[36m@@ -15,7 +14,7 @@[m [mfunction routeRequest($conn, $customHandlers = [], $prefix = 'handle') //recibe[m
+     // Sobrescribir handlers por defecto si hay personalizados[m
+     $handlers = array_merge($defaultHandlers, $customHandlers);[m
+ [m
+[31m-    if (!isset($handlers[$method]))//si no existe el metodo en este array [m
+[32m+[m[32m    if (!isset($handlers[$method]))[m[41m [m
+     {[m
+         http_response_code(405);[m
+         echo json_encode(["error" => "Método $method no permitido"]);[m
+[36m@@ -24,13 +23,13 @@[m [mfunction routeRequest($conn, $customHandlers = [], $prefix = 'handle') //recibe[m
+ [m
+     $handler = $handlers[$method];[m
+ [m
+[31m-    if (is_callable($handler)) //si existe una funcion con el nombre del handler, es decir que maneje ese metodo[m
+[32m+[m[32m    if (is_callable($handler))[m[41m [m
+     {[m
+[31m-        $handler($conn);//llama a la funcion que maneja el metodo con la conexion a la base de datos[m
+[32m+[m[32m        $handler($conn);[m
+     }[m
+     else[m
+     {[m
+         http_response_code(500);[m
+         echo json_encode(["error" => "Handler para $method no es válido"]);[m
+     }[m
+[31m-}[m
+\ No newline at end of file[m
+[32m+[m[32m}[m
+[1mdiff --git a/backend/routes/studentsRoutes.php b/backend/routes/studentsRoutes.php[m
+[1mindex bf12dc0..1026c0e 100644[m
+[1m--- a/backend/routes/studentsRoutes.php[m
+[1m+++ b/backend/routes/studentsRoutes.php[m
+[36m@@ -1,39 +1,7 @@[m
+ <?php[m
+ require_once("./config/databaseConfig.php");[m
+[31m-require_once("./routes/routesFactory.php");[m
+ require_once("./controllers/studentsController.php");[m
+ [m
+[31m-// routeRequest($conn);[m
+[32m+[m[32mrouteRequest($conn);[m
+ [m
+[31m-/**[m
+[31m- * switch ($_SERVER['REQUEST_METHOD']) ya no es necesario[m
+[31m- * su funcion es la misma que la de routesFactory[m
+[31m- * es apto a handlers customizados [m
+[31m- */[m
+[31m-[m
+[31m- [m
+[31m-/**[m
+[31m- * Ejemplo de como se extiende un archivo de rutas [m
+[31m- * para casos particulares[m
+[31m- * o validaciones:[m
+[31m- */[m
+[31m-[m
+[31m-routeRequest($conn, [[m
+[31m-    'POST' => function($conn) [m
+[31m-    {[m
+[31m-        // Validación o lógica extendida[m
+[31m-        $input = json_decode(file_get_contents("php://input"), true);[m
+[31m-        if (empty($input['fullname'])) [m
+[31m-        {[m
+[31m-            http_response_code(400);[m
+[31m-            echo json_encode(["error" => "Falta el nombre"]);//esto es solo en caso de que no hayan puesto el nombre[m
+[31m-            return;[m
+[31m-        }[m
+[31m-        handlePost($conn);[m
+[31m-    }[m
+[31m-]);[m
+[31m-[m
+[31m-/**[m
+[31m- * si no llamo al routeRequest con el post concretamente que es lo que hace?[m
+[31m-*/[m
+ ?>[m
+\ No newline at end of file[m
+[1mdiff --git a/backend/routes/studentsSubjectsRoutes.php b/backend/routes/studentsSubjectsRoutes.php[m
+[1mindex 07fb6c4..1780405 100644[m
+[1m--- a/backend/routes/studentsSubjectsRoutes.php[m
+[1m+++ b/backend/routes/studentsSubjectsRoutes.php[m
+[36m@@ -3,5 +3,5 @@[m [mrequire_once("./config/databaseConfig.php");[m
+ require_once("./routes/routesFactory.php");[m
+ require_once("./controllers/studentsSubjectsController.php");[m
+ [m
+[31m-routeRequest($conn);[m
+[32m+[m[32mrouteRequest($conn);  //server.php llama a este archivo o alguno de los otros de la carpetas routes, luego se invoca a la funcion routeRequest del routesFactory.php[m
+ ?>[m
+\ No newline at end of file[m
+[1mdiff --git a/backend/routes/subjectsRoutes.php b/backend/routes/subjectsRoutes.php[m
+[1mindex 4aba9e8..798ae38 100644[m
+[1m--- a/backend/routes/subjectsRoutes.php[m
+[1m+++ b/backend/routes/subjectsRoutes.php[m
+[36m@@ -1,7 +1,6 @@[m
+ <?php[m
+ require_once("./config/databaseConfig.php");[m
+ require_once("./routes/routesFactory.php");[m
+[31m-require_once("./controllers/subjectsController.php"); //esta es la unica diferencia entre los tres archivos de routes[m
+[32m+[m[32mrequire_once("./controllers/subjectsController.php");[m
+ [m
+[31m-routeRequest($conn);[m
+[31m-?>[m
+\ No newline at end of file[m
+[32m+[m[32mrouteRequest($conn);[m
+\ No newline at end of file[m
+[1mdiff --git a/backend/server.php b/backend/server.php[m
+[1mindex ae1a668..dbf763b 100644[m
+[1m--- a/backend/server.php[m
+[1m+++ b/backend/server.php[m
+[36m@@ -1,34 +1,27 @@[m
+ <?php[m
+[31m-[m
+[32m+[m[32m//PREGUNTAR POR EL .HTACCESS[m
+[32m+[m[32m// darle acceso a ciertas rutas del servidor, para[m
+[32m+[m[32m/**[m
+[32m+[m[32m * DEBUG MODE[m
+[32m+[m[32m */[m
+ ini_set('display_errors', 1);// indica a php que muestre los errores directamente por pantalla[m
+ error_reporting(E_ALL);  //muestra todos los tipos de errores [m
+ [m
+ header("Access-Control-Allow-Origin: *"); /** permite que cualquier frontend, desde cualquier origen *,[m
+   *pueda acceder al backend. es peligroso en temas de seguridad esto o no tiene que ver?  [m
+[31m-  *a que se refiere con front end? al lenguaje? [m
+[31m-  * es necesario cuando el frontend y backend no estan en el mismo dominio o puerto [m
+[31m-  */[m
+[32m+[m[32m  *a que se refiere con front end? al lenguaje? */[m
+[32m+[m[32m  /* es necesario cuando el frontend y backend no estan en el mismo dominio o puerto */[m
+ [m
+ header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS"); //indica al navegador los metodos http aceptados por el bcend[m
+ header("Access-Control-Allow-Headers: Content-Type"); /** permite las solicitudes con ciertos encabezados[m
+ *ese encabezado solo permite el nombre del encabezado, no sus valores[m
+[31m-*el tipo de contenido se chequea en el backend[m
+[31m-*/[m
+[31m-[m
+[31m-function sendCodeMessage($code, $message = "") //manda el mensaje sea cual sea el error[m
+[31m-{[m
+[31m-    http_response_code($code);[m
+[31m-    echo json_encode(["message" => $message]);[m
+[31m-    exit();[m
+[31m-}[m
+[31m-[m
+[32m+[m[32m*el tipo de contenido se chequea en el backend*/[m
+ [m
+[31m-[m
+[31m-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { /** el metodo options atiende preflights requests del navegador[m
+[31m-  *It is an HTTP request of the OPTIONS method, sent before the request itself, [m
+[31m-  *in order to determine if it is safe to send it.[m
+[32m+[m[32mif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { /* el metodo options atiende preflights requests del navegador[m
+[32m+[m[32m  It is an HTTP request of the OPTIONS method, sent before the request itself,[m[41m [m
+[32m+[m[32m  in order to determine if it is safe to send it.[m
+  */[m
+[31m-    sendCodeMessage(200);[m
+[32m+[m[32m    http_response_code(200);[m
+     exit();[m
+ }[m
+ [m
+[36m@@ -43,22 +36,30 @@[m [mif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { /** el metodo options atiende pr[m
+  *analizando la URL y decidiendo qué archivo de ruta invocar usando alguna convencion[m
+  *un switch?[m
+   */[m
+[32m+[m[32m  require_once("./routeDispatcher.php");[m
+[32m+[m[32m  dispatchRoute( $_SERVER['REQUEST_URI'] ); //funcion dentro del archivo de arriba, le mando la url obtenida[m
+ [m
+[31m-  /** [m
+[31m-  *require_once("./routeDispatcher.php");[m
+[31m-  *dispatchRoute( $_SERVER['REQUEST_URI'] ); //funcion dentro del archivo de arriba, le mando la url obtenida[m
+[31m-  *como ahora hago el enrutamiento en este mismo archivo, ya no necesito el dispatcher[m
+[31m-  */[m
+ [m
+ [m
+[32m+[m[32m  function sendCodeMessage($code, $message = "")[m
+[32m+[m[32m{[m
+[32m+[m[32m    http_response_code($code);[m
+[32m+[m[32m    echo json_encode(["message" => $message]);[m
+[32m+[m[32m    exit();[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// Respuesta correcta para solicitudes OPTIONS (preflight)[m
+[32m+[m[32mif ($_SERVER['REQUEST_METHOD'] === 'OPTIONS')[m
+[32m+[m[32m{[m
+[32m+[m[32m    sendCodeMessage(200); // 200 OK[m
+[32m+[m[32m}[m
+ [m
+ // Obtener el módulo desde la query string[m
+[31m-$uri = parse_url($_SERVER['REQUEST_URI']); //crea una matriz asociativa con todos los componentes de la url (el parametro que tiene)[m
+[31m-$query = $uri['query'] ?? ''; //le doy a query el valor de la clave query de la matriz asociativa[m
+[31m-//si no existe le doy un string vacio [m
+[31m-parse_str($query, $query_array);// Parsear la query string para obtener el módulo[m
+[31m-//parsea la cadena de consulta y la convierte en un array asociativo[m
+[31m-$module = $query_array['module'] ?? null;//obtenemos el valor de la clave module, si no existe le doy null[m
+[32m+[m[32m$uri = parse_url($_SERVER['REQUEST_URI']);   //la funcion parse_url() analiza una URL y devuelve sus componentes[m
+[32m+[m[32m$query = $uri['query'] ?? ''; //query toma el valor de la clave 'query' del array devuelto por parse_url[m
+[32m+[m[32m// Si no hay query, se asigna una cadena vacía[m
+[32m+[m[32mparse_str($query, $query_array); //parse_str() convierte una cadena de consulta en un array asociativo[m
+[32m+[m[32m$module = $query_array['module'] ?? null; // Si no hay módulo, se asigna null[m
+ [m
+ // Validación de existencia del módulo[m
+ if (!$module)[m
+[36m@@ -67,25 +68,21 @@[m [mif (!$module)[m
+ }[m
+ [m
+ // Validación de caracteres seguros: solo letras, números y guiones bajos[m
+[31m-if (!preg_match('/^\w+$/', $module))// devuelve la cantidad de matcheos o falso[m
+[32m+[m[32mif (!preg_match('/^\w+$/', $module))[m
+ {[m
+     sendCodeMessage(400, "Nombre de módulo inválido");[m
+ }[m
+ [m
+ // Buscar el archivo de ruta correspondiente[m
+[31m-$routeFile = __DIR__ . "/routes/{$module}Routes.php"; //se podrá hacer a partir de renombramientos como haciamos en el routedispatcher? [m
+[32m+[m[32m$routeFile = __DIR__ . "/routes/{$module}Routes.php";[m
+ [m
+[31m-if (file_exists($routeFile)){[m
+[31m-    require_once($routeFile); //incluye el archivo y ejecuta el código dentro de él[m
+[31m-} else{[m
+[31m-    sendCodeMessage(404, "Ruta para el módulo '{$module}' no encontrada"); //reemplaza el archivo de errores que teniamos[m
+[32m+[m[32mif (file_exists($routeFile))[m
+[32m+[m[32m{[m
+[32m+[m[32m    require_once($routeFile);[m
+[32m+[m[32m}[m
+[32m+[m[32melse[m
+[32m+[m[32m{[m
+[32m+[m[32m    sendCodeMessage(404, "Ruta para el módulo '{$module}' no encontrada");[m
+ }[m
+[31m-[m
+[31m-/**[m
+[31m- * el parseo que haciamos nosotros antes era parecido a este, pero este sin tocar el router[m
+[31m- * por eso no necesita el archivo .htaccess [m
+[31m- * el archivo .htaccess es un archivo de configuracion del servidor web apache[m
+[31m- * ademas no usabamos el _DIR_ y definiamos una variable para el pricipio de todas las rutas[m
+[31m- */[m
+ [m
+ ?>[m
+\ No newline at end of file[m
+[1mdiff --git a/frontend/html/students.html b/frontend/html/students.html[m
+[1mindex 31303c1..7f820f1 100644[m
+[1m--- a/frontend/html/students.html[m
+[1m+++ b/frontend/html/students.html[m
+[36m@@ -1,3 +1,4 @@[m
+[32m+[m[32m<!-- frontend/index.html -->[m
+ <!DOCTYPE html>[m
+ <html lang="es">[m
+ [m
+[36m@@ -54,6 +55,6 @@[m
+   <footer class="w3-center w3-margin-top">[m
+     <a class="w3-btn w3-black" href="../index.html">Volver al Panel Principal</a>[m
+   </footer>[m
+[31m-  <!-- <script src="js/frontDispatcher.js"></script> aca hay que conectar al js propio de students, tanto el api como el controller -->[m
+[32m+[m[41m  [m
+ </body>[m
+ </html>[m
+[1mdiff --git a/frontend/html/studentsSubjects.html b/frontend/html/studentsSubjects.html[m
+[1mindex 54ad223..db0680a 100644[m
+[1m--- a/frontend/html/studentsSubjects.html[m
+[1m+++ b/frontend/html/studentsSubjects.html[m
+[36m@@ -62,4 +62,4 @@[m
+   </footer>[m
+   [m
+ </body>[m
+[31m-</html>[m
+\ No newline at end of file[m
+[32m+[m[32m</html>[m
+[1mdiff --git a/frontend/html/subjects.html b/frontend/html/subjects.html[m
+[1mindex 2b549e5..70f846e 100644[m
+[1m--- a/frontend/html/subjects.html[m
+[1m+++ b/frontend/html/subjects.html[m
+[36m@@ -46,4 +46,4 @@[m
+   </footer>[m
+   [m
+ </body>[m
+[31m-</html>[m
+\ No newline at end of file[m
+[32m+[m[32m</html>[m
+[1mdiff --git a/frontend/index.html b/frontend/index.html[m
+[1mindex cb9db44..d11a368 100644[m
+[1m--- a/frontend/index.html[m
+[1m+++ b/frontend/index.html[m
+[36m@@ -24,4 +24,4 @@[m
+   </main>[m
+ [m
+ </body>[m
+[31m-</html>[m
+\ No newline at end of file[m
+[32m+[m[32m</html>[m
+[1mdiff --git a/frontend/js/controllers/studentsController.js b/frontend/js/Controllers/studentsController.js[m
+[1msimilarity index 78%[m
+[1mrename from frontend/js/controllers/studentsController.js[m
+[1mrename to frontend/js/Controllers/studentsController.js[m
+[1mindex 72660f6..6da6150 100644[m
+[1m--- a/frontend/js/controllers/studentsController.js[m
+[1m+++ b/frontend/js/Controllers/studentsController.js[m
+[36m@@ -1,4 +1,3 @@[m
+[31m-//este archivo todavia lo tengo que leer bien[m
+ import { studentsAPI } from '../api/studentsAPI.js';[m
+ [m
+ document.addEventListener('DOMContentLoaded', () => [m
+[36m@@ -35,7 +34,7 @@[m [mfunction setupFormHandler()[m
+     });[m
+ }[m
+   [m
+[31m-function getFormData() //getAllStudents pero[m
+[32m+[m[32mfunction getFormData()[m
+ {[m
+     return {[m
+         id: document.getElementById('studentId').value.trim(),[m
+[36m@@ -51,7 +50,7 @@[m [mfunction clearForm()[m
+     document.getElementById('studentId').value = '';[m
+ }[m
+   [m
+[31m-async function loadStudents() //este carga todos los estudiantes, tiene el fetchall adentro[m
+[32m+[m[32masync function loadStudents()[m
+ {[m
+     try [m
+     {[m
+[36m@@ -64,8 +63,8 @@[m [masync function loadStudents() //este carga todos los estudiantes, tiene el fetch[m
+     }[m
+ }[m
+   [m
+[31m-function renderStudentTable(students)//este crea/actualiza la tabla celda por celda cada vez que recarga la pagina[m
+[31m-{ //es lo genera el efecto de dinamismo de la tabla[m
+[32m+[m[32mfunction renderStudentTable(students)[m
+[32m+[m[32m{[m
+     const tbody = document.getElementById('studentTableBody');[m
+     tbody.replaceChildren();[m
+   [m
+[36m@@ -115,24 +114,24 @@[m [mfunction fillForm(student)[m
+     document.getElementById('email').value = student.email;[m
+     document.getElementById('age').value = student.age;[m
+ }[m
+[31m-[m
+[32m+[m[41m  [m
+ async function confirmDelete(id) [m
+ {[m
+     if (!confirm('¿Estás seguro que deseas borrar este estudiante?')) return;[m
+   [m
+     try [m
+     {[m
+[31m-        const existingRelations = await subjectsAPI.fetchAll();[m
+[31m-        const StudentIsRelated = existingRelations.some(rel => String(rel.student_id) === String(id));[m
+[31m-    [m
+[31m-        if (StudentIsRelated)[m
+[31m-        {[m
+[31m-            alert('No se puede borrar el estudiante porque tiene materias asociadas.');[m
+[31m-            return; //frena la ejecución si el estudiante tiene materias asociadas[m
+[31m-        }[m
+[31m-        //si no, procede a borrar el estudiante[m
+[31m-        await studentsAPI.remove(id);[m
+[31m-        loadStudents();[m
+[32m+[m[32m               const existingRelations = await studentsSubjectsAPI.fetchAll();[m
+[32m+[m[32m               const StudenttIsRelated= existingRelations.some(rel => rel.student_id === id);[m[41m    [m
+[32m+[m[41m       [m
+[32m+[m[32m               if (StudentIsRelated)[m
+[32m+[m[32m               {[m
+[32m+[m[32m                   alert('No se puede borrar el estudiante porque tiene historial academico.');[m
+[32m+[m[32m                   return; //frena la ejecución si hay materias cargadas[m[41m [m
+[32m+[m[32m               }[m
+[32m+[m[32m               // Si no hay materias cargadas, procede a borrar el estudiante[m
+[32m+[m[32m               await studentsAPI.remove(id);[m
+[32m+[m[32m               loadStudents();[m
+     } [m
+     catch (err) [m
+     {[m
+[36m@@ -140,3 +139,4 @@[m [masync function confirmDelete(id)[m
+     }[m
+ }[m
+   [m
+[41m+[m
+[1mdiff --git a/frontend/js/controllers/studentsSubjectsController.js b/frontend/js/Controllers/studentsSubjectsController.js[m
+[1msimilarity index 90%[m
+[1mrename from frontend/js/controllers/studentsSubjectsController.js[m
+[1mrename to frontend/js/Controllers/studentsSubjectsController.js[m
+[1mindex d171db1..0f75225 100644[m
+[1m--- a/frontend/js/controllers/studentsSubjectsController.js[m
+[1m+++ b/frontend/js/Controllers/studentsSubjectsController.js[m
+[36m@@ -1,9 +1,8 @@[m
+ import { studentsAPI } from '../api/studentsAPI.js';[m
+ import { subjectsAPI } from '../api/subjectsAPI.js';[m
+[31m-import { studentsSubjectsAPI } from '../api/studentsSubjectsAPI.js'; //no lo usamos pero lo importamos para que no de error[m
+[31m-//este archivo es el que se encarga de cargar los estudiantes y las materias, y de crear la relación entre ellos[m
+[32m+[m[32mimport { studentsSubjectsAPI } from '../api/studentsSubjectsAPI.js';[m
+[32m+[m
+ [m
+[31m-//tengo que leerlo mas a fondo[m
+ document.addEventListener('DOMContentLoaded', () => [m
+ {[m
+     initSelects();[m
+[36m@@ -59,18 +58,16 @@[m [mfunction setupFormHandler()[m
+                 await studentsSubjectsAPI.update(relation);[m
+             } [m
+             else [m
+[31m-            {[m
+[31m-                //traer todas las relaciones actuales[m
+[32m+[m[32m            {[m[41m   [m
+[32m+[m[32m                 //traer todas las relaciones actuales[m
+                 const allRelations = await studentsSubjectsAPI.fetchAll();[m
+[31m-                //buscar si ya existe una relación con ese estudiante y esa materia[m
+[32m+[m[32m                // Buscar si ya existe una con ese estudiante y esa materia[m
+                 const alreadyExists = allRelations.some(r => r.student_id === relation.student_id && r.subject_id === relation.subject_id);[m
+[31m-[m
+[31m-                if (alreadyExists)[m
+[32m+[m[32m                 if (alreadyExists)[m[41m [m
+                 {[m
+                     alert('La relación entre ese estudiante y materia ya existe.');[m
+[31m-                    return; //frena la ejecución si ya existe una relación con ese estudiante y esa materia[m
+[32m+[m[32m                    return;[m
+                 }[m
+[31m-[m
+                 await studentsSubjectsAPI.create(relation);[m
+             }[m
+             clearForm();[m
+[36m@@ -78,7 +75,14 @@[m [mfunction setupFormHandler()[m
+         } [m
+         catch (err) [m
+         {[m
+[31m-            console.error('Error guardando relación:', err.message);[m
+[32m+[m[32m            if (err instanceof Response) {[m
+[32m+[m[32m                const res = await err.json();[m
+[32m+[m[32m                 if (res.error) {[m
+[32m+[m[32m                    alert(res.error);  // ← muestra el mensaje del backend[m
+[32m+[m[32m            }[m
+[32m+[m[32m            } else {[m
+[32m+[m[32m                 console.error('Error guardando relación:', err.message);[m
+[32m+[m[32m                  }[m[41m      [m
+         }[m
+     });[m
+ }[m
+[1mdiff --git a/frontend/js/controllers/subjectsController.js b/frontend/js/Controllers/subjectsController.js[m
+[1msimilarity index 64%[m
+[1mrename from frontend/js/controllers/subjectsController.js[m
+[1mrename to frontend/js/Controllers/subjectsController.js[m
+[1mindex 2ff9f88..90c78a2 100644[m
+[1m--- a/frontend/js/controllers/subjectsController.js[m
+[1m+++ b/frontend/js/Controllers/subjectsController.js[m
+[36m@@ -1,10 +1,4 @@[m
+ import { subjectsAPI } from '../api/subjectsAPI.js';[m
+[31m-//hacemos uso de las funciones de la apifactory y creas el objeto[m
+[31m-[m
+[31m-/**[m
+[31m- * los nombres de las funciones son los mismos que los de la apiFactory[m
+[31m- * son medio autoexplicativas pero debería igual leerlas bien por dentro para entender la logica de cada una[m
+[31m-*/[m
+ [m
+ document.addEventListener('DOMContentLoaded', () => [m
+ {[m
+[36m@@ -32,22 +26,6 @@[m [mfunction setupSubjectFormHandler()[m
+             }[m
+             else[m
+             {[m
+[31m-                const existingSubjects = await subjectsAPI.fetchAll(); //se trae todas las materias existentes[m
+[31m-                const nameAlreadyExists = existingSubjects.some(s => s.name.toLowerCase() === subject.name.toLowerCase());[m
+[31m-                //some es un metodo que recorre el arreglo de materias y compara el nombre de cada uno[m
+[31m-[m
+[31m-[m
+[31m-                /**[m
+[31m-                 * s es cada materia existente en el array existingSubjects[m
+[31m-                 * s.name es el nombre de esa materia existente[m
+[31m-                 * subject.name es el nombre de la materia que queres agregar[m
+[31m-                 */[m
+[31m-                if (nameAlreadyExists)[m
+[31m-                {[m
+[31m-                    alert('Ya existe una materia con ese nombre.');[m
+[31m-                    return; //frena la ejecución si ya existe una materia con ese nombre[m
+[31m-                }[m
+[31m-[m
+                 await subjectsAPI.create(subject);[m
+             }[m
+             [m
+[36m@@ -127,15 +105,6 @@[m [masync function confirmDeleteSubject(id)[m
+ [m
+     try[m
+     {[m
+[31m-        const existingRelations = await subjectsAPI.fetchAll();[m
+[31m-        const SubjectIsRelated = existingRelations.some(rel => rel.subject_id === id);[m
+[31m-[m
+[31m-        if (SubjectIsRelated)[m
+[31m-        {[m
+[31m-            alert('No se puede borrar la materia porque tiene estudiantes asociados.');[m
+[31m-            return; //frena la ejecución si la materia tiene estudiantes asociados[m
+[31m-        }[m
+[31m-        //si no hay estudiantes inscritos, procede a borrar la materia[m
+         await subjectsAPI.remove(id);[m
+         loadSubjects();[m
+     }[m
+[1mdiff --git a/frontend/js/api/apiFactory.js b/frontend/js/api/apiFactory.js[m
+[1mindex c445665..5dbe201 100644[m
+[1m--- a/frontend/js/api/apiFactory.js[m
+[1m+++ b/frontend/js/api/apiFactory.js[m
+[36m@@ -1,11 +1,7 @@[m
+[31m-//fabrica que genera un objeto para interactuar con una api backend con un modulo especifico[m
+[31m-[m
+[31m-export function createAPI(moduleName, config = {}) //la config va vacia porque no se usa [m
+[31m-//el config se usa en el caso de que se quiera cambiar la url del backend[m
+[32m+[m[32mexport function createAPI(moduleName, config = {})[m[41m [m
+ {[m
+     const API_URL = config.urlOverride ?? `../../backend/server.php?module=${moduleName}`;[m
+[31m-    //el ?? es un operador de coalescencia nula, si no existe la urlOverride se usa la url por defecto[m
+[31m-    //se queda con lo primero que no es null[m
+[32m+[m
+     async function sendJSON(method, data) [m
+     {[m
+         const res = await fetch(API_URL,[m
+[36m@@ -39,4 +35,4 @@[m [mexport function createAPI(moduleName, config = {}) //la config va vacia porque n[m
+             return await sendJSON('DELETE', { id });[m
+         }[m
+     };[m
+[31m-}[m
+\ No newline at end of file[m
+[32m+[m[32m}[m
+[1mdiff --git a/frontend/js/api/studentsAPI.js b/frontend/js/api/studentsAPI.js[m
+[1mindex 3e62dee..e964158 100644[m
+[1m--- a/frontend/js/api/studentsAPI.js[m
+[1m+++ b/frontend/js/api/studentsAPI.js[m
+[36m@@ -1,3 +1,2 @@[m
+[31m-//hacemos uso de las funciones de la apifactory y creas el objeto[m
+ import { createAPI } from './apiFactory.js';[m
+[31m-export const studentsAPI = createAPI('students');[m
+\ No newline at end of file[m
+[32m+[m[32mexport const studentsAPI = createAPI('students');[m

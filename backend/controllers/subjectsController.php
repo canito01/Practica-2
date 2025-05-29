@@ -37,7 +37,9 @@ function handlePost($conn)
 {
     $input = json_decode(file_get_contents("php://input"), true);
     $nombre = $input['name'];
-    //stmt es una variable que contiene la consulta preparada
+    
+    /*
+    stmt es una variable que contiene la consulta preparada
     $stmt = $conn->prepare("SELECT id FROM subjects WHERE LOWER(name) = LOWER(?)");  // Verificar si ya existe una materia con ese nombre 
     //la funcion lower convierte el nombre a minusculas para evitar problemas de mayusculas y minusculas
     $stmt->bind_param("s", $nombre); // ayuda a evitar inyecciones SQL ya que solo se permite un string como parametro
@@ -49,7 +51,7 @@ function handlePost($conn)
         http_response_code(400); 
         echo json_encode(["error" => "Ya existe una materia con ese nombre"]);
         return;
-    }
+    }*/
 
 
     if (createSubject($conn, $nombre)) // si no existe, crearla

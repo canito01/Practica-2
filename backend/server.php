@@ -4,8 +4,8 @@
 /**
  * DEBUG MODE
  */
-ini_set('display_errors', 1);// indica a php que muestre los errores directamente por pantalla
-error_reporting(E_ALL);  //muestra todos los tipos de errores 
+ini_set('display_errors', 0);// indica a php que muestre los errores directamente por pantalla
+//error_reporting(E_ALL);  //muestra todos los tipos de errores 
 
 header("Access-Control-Allow-Origin: *"); /** permite que cualquier frontend, desde cualquier origen *,
   *pueda acceder al backend. es peligroso en temas de seguridad esto o no tiene que ver?  
@@ -36,8 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { /* el metodo options atiende pre
  *analizando la URL y decidiendo qué archivo de ruta invocar usando alguna convencion
  *un switch?
   */
-  require_once("./routeDispatcher.php");
-  dispatchRoute( $_SERVER['REQUEST_URI'] ); //funcion dentro del archivo de arriba, le mando la url obtenida
 
 
 

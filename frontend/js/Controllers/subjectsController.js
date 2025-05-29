@@ -26,6 +26,22 @@ function setupSubjectFormHandler()
             }
             else
             {
+                const existingSubjects = await subjectsAPI.fetchAll(); //se trae todas las materias existentes
+                const nameAlreadyExists = existingSubjects.some(s => s.name.toLowerCase() === subject.name.toLowerCase());
+                //some es un metodo que recorre el arreglo de materias y compara el nombre de cada uno
+
+
+                /**
+                 * s es cada materia existente en el array existingSubjects
+                 * s.name es el nombre de esa materia existente
+                 * subject.name es el nombre de la materia que queres agregar
+                 */
+                if (nameAlreadyExists)
+                {
+                    alert('Ya existe una materia con ese nombre.');
+                    return; //frena la ejecución si ya existe una materia con ese nombre
+                }
+
                 await subjectsAPI.create(subject);
             }
             
@@ -105,8 +121,26 @@ async function confirmDeleteSubject(id)
 
     try
     {
+        const existingRelations = await subjectsAPI.fetchAll();
+        existingRelations.forEach(rel => console.log(rel, "relacion existente"));
+
+        const SubjectIsRelated = existingRelations.some(rel => rel.id === id);
+        console.log(id, "asdasdasd" );
+        console.log("SE QUEDA AFUERA DE LA FUNCIÓN");
+        console.log(SubjectIsRelated, "asdasdad");
+        console.log(existingRelations, "aaaa");
+
+
+        if (SubjectIsRelated)
+        {
+            console.log("Entra al if de borrar materia");
+            alert('No se puede borrar la materia porque tiene estudiantes asociados.');
+            return; //frena la ejecución si la materia tiene estudiantes asociados
+        }
+        //si no hay estudiantes inscritos, procede a borrar la materia
         await subjectsAPI.remove(id);
         loadSubjects();
+
     }
     catch (err)
     {

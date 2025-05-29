@@ -22,6 +22,22 @@ function setupFormHandler()
             } 
             else 
             {
+                const existingStudents = await studentsAPI.fetchAll(); //se trae todas las materias existentes
+                const nameAlreadyExists = existingStudents.some(s => s.name.toLowerCase() === student.name.toLowerCase());
+                //some es un metodo que recorre el arreglo de materias y compara el nombre de cada uno
+
+
+
+                /**
+                 * s es cada materia existente en el array existingSubjects
+                 * s.name es el nombre de esa materia existente
+                 * subject.name es el nombre de la materia que queres agregar
+                 */
+                if (nameAlreadyExists)
+                {
+                alert('Ya existe un alumno con ese nombre.');
+                return; //frena la ejecución si ya existe una materia con ese nombre
+                }
                 await studentsAPI.create(student);
             }
             clearForm();
@@ -122,7 +138,7 @@ async function confirmDelete(id)
     try 
     {
                const existingRelations = await studentsSubjectsAPI.fetchAll();
-               const StudenttIsRelated= existingRelations.some(rel => rel.student_id === id);    
+               const StudentIsRelated= existingRelations.some(rel => rel.id === id);    
        
                if (StudentIsRelated)
                {
