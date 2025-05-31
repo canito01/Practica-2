@@ -8,13 +8,14 @@ document.addEventListener('DOMContentLoaded', () =>
     initSelects();
     setupFormHandler();
     loadRelations();
+    setupCancelHandler();
 });
 
 async function initSelects() 
 {
     try 
     {
-        // Cargar estudiantes
+        // Cargar estudiantes en sus respectivos select
         const students = await studentsAPI.fetchAll();
         const studentSelect = document.getElementById('studentIdSelect');
         students.forEach(s => 
@@ -22,7 +23,7 @@ async function initSelects()
             const option = document.createElement('option');
             option.value = s.id;
             option.textContent = s.fullname;
-            studentSelect.appendChild(option);
+            studentSelect.appendChild(option); //appendchild agrega el option al select 
         });
 
         // Cargar materias
@@ -41,6 +42,7 @@ async function initSelects()
         console.error('Error cargando estudiantes o materias:', err.message);
     }
 }
+
 
 function setupFormHandler() 
 {
@@ -91,10 +93,10 @@ function setupFormHandler()
 function getFormData() 
 {
     return{
-        id: document.getElementById('relationId').value.trim(),
-        student_id: document.getElementById('studentIdSelect').value,
+        id: document.getElementById('relationId').value.trim(), //funciones del DOM para obtener los valores de los campos del formulario
+        student_id: document.getElementById('studentIdSelect').value, //funcionan con los id provenientes del HTML
         subject_id: document.getElementById('subjectIdSelect').value,
-        approved: document.getElementById('approved').checked ? 1 : 0
+        approved: document.getElementById('approved').checked ? 1 : 0  // Convertir el checkbox a 1 o 0 para el backend
     };
 }
 
@@ -182,7 +184,7 @@ function createActionsCell(relation)
     return td;
 }
 
-function fillForm(relation) 
+function fillForm(relation) //Llena el formulario con los datos de la relación seleccionada para editar
 {
     document.getElementById('relationId').value = relation.id;
     document.getElementById('studentIdSelect').value = relation.student_id;
@@ -203,4 +205,13 @@ async function confirmDelete(id)
     {
         console.error('Error al borrar inscripción:', err.message);
     }
+}
+
+function setupCancelHandler()  //Esto asegura que si el usuario habia seleccionado un estudiante para editar, al hacer click en el botón Cancelar, se limpie el campo del id del estudiante
+{
+    const cancelBtn = document.getElementById('cancelBtn');
+    cancelBtn.addEventListener('click', () => 
+    {
+        document.getElementById('studentId').value = '';
+    });
 }

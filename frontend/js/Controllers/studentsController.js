@@ -1,18 +1,19 @@
 import { studentsAPI } from '../api/studentsAPI.js';
 
-document.addEventListener('DOMContentLoaded', () => 
+document.addEventListener('DOMContentLoaded', () =>   //document es un objeto que representa el documento HTML cargado en el navegador
 {
-    loadStudents();
-    setupFormHandler();
+    loadStudents(); //carga y muestra todos los estudiantes al cargar la página
+    setupFormHandler(); //prepara el formulario para que cuando el usuario haga submit, se ejecute la función que guarda los datos
+    setupCancelHandler();  // agrega esta línea para configurar el manejador del botón Cancelar
 });
   
-function setupFormHandler()
+function setupFormHandler() //configura el envio del formulario
 {
-    const form = document.getElementById('studentForm');
+    const form = document.getElementById('studentForm'); //obtiene el formulario por su id
     form.addEventListener('submit', async e => 
     {
-        e.preventDefault();
-        const student = getFormData();
+        e.preventDefault(); //previene el comportamiento por defecto del formulario (que es recargar la página al enviar)
+        const student = getFormData(); //obtiene los datos del formulario y los guarda en un objeto student
     
         try 
         {
@@ -29,9 +30,9 @@ function setupFormHandler()
 
 
                 /**
-                 * s es cada materia existente en el array existingSubjects
+                 * s es cada materia existente en el array existingStudents
                  * s.name es el nombre de esa materia existente
-                 * subject.name es el nombre de la materia que queres agregar
+                 * student.name es el nombre del estudiante que queres agregar
                  */
                 if (nameAlreadyExists)
                 {
@@ -43,14 +44,25 @@ function setupFormHandler()
             clearForm();
             loadStudents();
         }
-        catch (err)
+        catch (err) //debido a la validacion en el else nunca entra en este bloque, pero lo dejo por si acaso
         {
             console.error(err.message);
         }
     });
 }
+
+function setupCancelHandler()  //Esto asegura que si el usuario habia seleccionado un estudiante para editar, al hacer click en el botón Cancelar, se limpie el campo del id del estudiante
+{
+    const cancelBtn = document.getElementById('cancelBtn');
+    cancelBtn.addEventListener('click', () => 
+    {
+        document.getElementById('studentId').value = '';
+    });
+}
+
+
   
-function getFormData()
+function getFormData() //obtiene los datos del formulario y los devuelve como un objeto
 {
     return {
         id: document.getElementById('studentId').value.trim(),
@@ -138,7 +150,7 @@ async function confirmDelete(id)
     try 
     {
                const existingRelations = await studentsSubjectsAPI.fetchAll();
-               const StudentIsRelated= existingRelations.some(rel => rel.id === id);    
+               const StudentIsRelated= existingRelations.some(rel => rel.id === id);    //rel.studentId === id);??
        
                if (StudentIsRelated)
                {

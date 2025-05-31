@@ -1,35 +1,58 @@
 <?php
+
+/*
+    Los controladores definen funciones que se ejecutan 
+    cuando el usuario, en este caso, hace una operacion
+    sobre los estudiantes: ver, crear, modificar o eliminar.
+
+    Se llama desde routesFactory.php, que es el despachador de rutas.
+    Usa funciones del modelo students.php para interactuar con la base de datos.
+*/
 require_once("./models/students.php");
 
 function handleGet($conn) {
-    if (isset($_GET['id'])) {
-        $result = getStudentById($conn, $_GET['id']);
-        echo json_encode($result->fetch_assoc());
-    } else {
-        $result = getAllStudents($conn);
-        $data = [];
-        while ($row = $result->fetch_assoc()) {
-            $data[] = $row;
-        }
-        echo json_encode($data);
+{
+    $input = json_decode(file_get_contents("php://input"), true);
+    
+    if (isset($input['id']))   //En get no suele usarse el cuerpo del envio, sino que se usa la URL, pero aca se nos permite para poder filtrar por id
+    {
+        $student = getStudentById($conn, $input['id']);
+        echo json_encode($student);
+    } 
+    else
+    {
+        $students = getAllStudents($conn);
+        echo json_encode($students);
     }
 }
 
-function handlePost($conn) {
+function handlePost($conn) 
+{
     $input = json_decode(file_get_contents("php://input"), true);
-    if (createStudent($conn, $input['fullname'], $input['email'], $input['age'])) {
+
+    $result = createStudent($conn, $input['fullname'], $input['email'], $input['age']);
+    if ($result['inserted'] > 0) //inserted es el numero de filas insertadas, si es mayor a 0, se inserto correctamente
+    {
         echo json_encode(["message" => "Estudiante agregado correctamente"]);
-    } else {
+    } 
+    else 
+    {
         http_response_code(500);
         echo json_encode(["error" => "No se pudo agregar"]);
     }
 }
 
-function handlePut($conn) {
+function handlePut($conn) 
+{
     $input = json_decode(file_get_contents("php://input"), true);
-    if (updateStudent($conn, $input['id'], $input['fullname'], $input['email'], $input['age'])) {
+
+    $result = updateStudent($conn, $input['id'], $input['fullname'], $input['email'], $input['age']);
+    if ($result['updated'] > 0) 
+    {
         echo json_encode(["message" => "Actualizado correctamente"]);
-    } else {
+    } 
+    else 
+    {
         http_response_code(500);
         echo json_encode(["error" => "No se pudo actualizar"]);
     }
@@ -53,9 +76,14 @@ function handleDelete($conn) {
     }
     // Si no hay materias asignadas, proceder a eliminar el estudiante   */
 
-    if (deleteStudent($conn, $input['id'])) {
+    $result = deleteStudent($conn, $input['id']);
+
+     if ($result['deleted'] > 0) 
+    {
         echo json_encode(["message" => "Eliminado correctamente"]);
-    } else {
+    } 
+    else 
+    {
         http_response_code(500);
         echo json_encode(["error" => "No se pudo eliminar"]);
     }

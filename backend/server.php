@@ -1,45 +1,30 @@
 <?php
-//PREGUNTAR POR EL .HTACCESS
-// darle acceso a ciertas rutas del servidor, para
-/**
- * DEBUG MODE
- */
-ini_set('display_errors', 0);// indica a php que muestre los errores directamente por pantalla
-//error_reporting(E_ALL);  //muestra todos los tipos de errores 
 
-header("Access-Control-Allow-Origin: *"); /** permite que cualquier frontend, desde cualquier origen *,
-  *pueda acceder al backend. es peligroso en temas de seguridad esto o no tiene que ver?  
-  *a que se refiere con front end? al lenguaje? */
-  /* es necesario cuando el frontend y backend no estan en el mismo dominio o puerto */
 
+/* 
+    1) recibe la solicitud del navegador o frontend
+    2) valida si el modulo es correcto
+    3) redirige la paeticion al archivo php adecuado segun el modulo
+    4) maneja solicitudes OPTIONS (preflight) para CORS
+    5) si algo falla, responde con un mensaje de error en formato JSON
+*/ 
+
+/**FOR DEBUG: */  // Para habilitar la visualización de errores en el navegador en el entorno de desarrollo
+// ini_set('display_errors', 1);
+// ini_set('display_startup_errors', 1);
+// error_reporting(E_ALL);
+
+//Estas 3 lineas son necesarias cuando el frontend y backend no estan en el mismo dominio o puerto
+
+
+header("Access-Control-Allow-Origin: *"); // permite que cualquier frontend, desde cualquier origen 
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS"); //indica al navegador los metodos http aceptados por el bcend
 header("Access-Control-Allow-Headers: Content-Type"); /** permite las solicitudes con ciertos encabezados
 *ese encabezado solo permite el nombre del encabezado, no sus valores
 *el tipo de contenido se chequea en el backend*/
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { /* el metodo options atiende preflights requests del navegador
-  It is an HTTP request of the OPTIONS method, sent before the request itself, 
-  in order to determine if it is safe to send it.
- */
-    http_response_code(200);
-    exit();
-}
 
-// require_once("./routes/studentsRoutes.php"); 
-/** incluye el archivo que define las RUTAS o la lógica que responderá a la peticion actual
-  * usa require once para incluirlo una sola vez, lo que evita errores por multiples inclusiones
- */
-/* este archivo debería analizar la URL, metodo y decidir qué controlador invocar. controlador?
- */
-
- /** tiene que estar preparado para modulos futuros
- *analizando la URL y decidiendo qué archivo de ruta invocar usando alguna convencion
- *un switch?
-  */
-
-
-
-  function sendCodeMessage($code, $message = "")
+  function sendCodeMessage($code, $message = "") // Esta función envía una respuesta JSON con un código de estado HTTP y un mensaje, cuando se recibe una solicitud no válida
 {
     http_response_code($code);
     echo json_encode(["message" => $message]);
@@ -47,12 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { /* el metodo options atiende pre
 }
 
 // Respuesta correcta para solicitudes OPTIONS (preflight)
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS')
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') //solicitud de prueba para verificar si el navegador puede hacer solicitudes al backend
 {
     sendCodeMessage(200); // 200 OK
 }
 
-// Obtener el módulo desde la query string
+// Obtener el módulo desde la URL
 $uri = parse_url($_SERVER['REQUEST_URI']);   //la funcion parse_url() analiza una URL y devuelve sus componentes
 $query = $uri['query'] ?? ''; //query toma el valor de la clave 'query' del array devuelto por parse_url
 // Si no hay query, se asigna una cadena vacía
@@ -66,13 +51,16 @@ if (!$module)
 }
 
 // Validación de caracteres seguros: solo letras, números y guiones bajos
-if (!preg_match('/^\w+$/', $module))
+if (!preg_match('/^\w+$/', $module)) //protege contra inyecciones de código
 {
     sendCodeMessage(400, "Nombre de módulo inválido");
 }
 
 // Buscar el archivo de ruta correspondiente
-$routeFile = __DIR__ . "/routes/{$module}Routes.php";
+$routeFile = __DIR__ . "/routes/{$module}Routes.php";  
+// __DIR__ es una constante que contiene la ruta del directorio actual del script
+// Se construye la ruta al archivo de rutas del módulo especificado
+// Si el archivo de rutas existe, se incluye; de lo contrario, se envía un mensaje de error 404
 
 if (file_exists($routeFile))
 {

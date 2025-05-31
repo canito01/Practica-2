@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () =>
 {
     loadSubjects();
     setupSubjectFormHandler();
+    setupCancelHandler();
 });
 
 function setupSubjectFormHandler() 
@@ -146,4 +147,13 @@ async function confirmDeleteSubject(id)
     {
         console.error('Error al borrar materia:', err.message);
     }
+}
+
+function setupCancelHandler()  //Esto asegura que si el usuario habia seleccionado un estudiante para editar, al hacer click en el botón Cancelar, se limpie el campo del id del estudiante
+{
+    const cancelBtn = document.getElementById('cancelBtn');
+    cancelBtn.addEventListener('click', () => 
+    {
+        document.getElementById('studentId').value = '';
+    });
 }

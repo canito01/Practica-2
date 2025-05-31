@@ -18,8 +18,11 @@ export function createAPI(moduleName, config = {})
     return {
         async fetchAll()
         {
+
             const res = await fetch(API_URL);
+    
             if (!res.ok) throw new Error("No se pudieron obtener los datos");
+            
             return await res.json();
         },
         async create(data)

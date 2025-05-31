@@ -3,37 +3,16 @@ require_once("./models/studentsSubjects.php");
 
 function handleGet($conn) 
 {
-    $result = getAllSubjectsStudents($conn);
-    $data = [];
-    while ($row = $result->fetch_assoc()) 
-    {
-        $data[] = $row;
-    }
-    echo json_encode($data);
+    $studentsSubjects = getAllSubjectsStudents($conn);
+    echo json_encode($studentsSubjects);
 }
 
 function handlePost($conn) 
 {
     $input = json_decode(file_get_contents("php://input"), true);
-
-    $studentId = $input['student_id'];
-    $subjectId = $input['subject_id'];
-    $approved = $input['approved'];
-
-    //verificar si ya existe esa relación
-    $stmt = $conn->prepare("SELECT 1 FROM student_subject WHERE student_id = ? AND subject_id = ?");
-    $stmt->bind_param("ii", $studentId, $subjectId); //asociamos los parametros a la consulta preparada
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) 
-    {
-        http_response_code(400);
-        echo json_encode(["error" => "La relación entre el estudiante y la materia ya existe"]);
-        return;
-    }
     
-    if (assignSubjectToStudent($conn, $input['student_id'], $input['subject_id'], $input['approved'])) 
+    $result = assignSubjectToStudent($conn, $input['student_id'], $input['subject_id'], $input['approved']);
+    if ($result['inserted'] > 0) 
     {
         echo json_encode(["message" => "Asignación realizada"]);
     } 
@@ -55,7 +34,8 @@ function handlePut($conn)
         return;
     }
 
-    if (updateStudentSubject($conn, $input['id'], $input['student_id'], $input['subject_id'], $input['approved'])) 
+    $result = updateStudentSubject($conn, $input['id'], $input['student_id'], $input['subject_id'], $input['approved']);
+    if ($result['updated'] > 0) 
     {
         echo json_encode(["message" => "Actualización correcta"]);
     } 
@@ -69,7 +49,9 @@ function handlePut($conn)
 function handleDelete($conn) 
 {
     $input = json_decode(file_get_contents("php://input"), true);
-    if (removeStudentSubject($conn, $input['id'])) 
+
+    $result = removeStudentSubject($conn, $input['id']);
+    if ($result['deleted'] > 0) 
     {
         echo json_encode(["message" => "Relación eliminada"]);
     } 

@@ -3,20 +3,17 @@ require_once("./models/subjects.php");
 
 function handleGet($conn) 
 {
-    if (isset($_GET['id'])) 
+   $input = json_decode(file_get_contents("php://input"), true);
+
+    if (isset($input['id'])) 
     {
-        $result = getSubjectById($conn, $_GET['id']);
-        echo json_encode($result->fetch_assoc());
+        $subject = getSubjectById($conn, $input['id']);
+        echo json_encode($subject);
     } 
     else 
     {
-        $result = getAllSubjects($conn);
-        $data = [];
-        while ($row = $result->fetch_assoc()) 
-        {
-            $data[] = $row;
-        }
-        echo json_encode($data);
+        $subjects = getAllSubjects($conn);
+        echo json_encode($subjects);
     }
 }
 
@@ -36,7 +33,7 @@ function handleGet($conn)
 function handlePost($conn) 
 {
     $input = json_decode(file_get_contents("php://input"), true);
-    $nombre = $input['name'];
+    $result = createSubject($conn, $input['name']);
     
     /*
     stmt es una variable que contiene la consulta preparada
@@ -54,7 +51,7 @@ function handlePost($conn)
     }*/
 
 
-    if (createSubject($conn, $nombre)) // si no existe, crearla
+    if ($result['inserted'] > 0) 
     {
         echo json_encode(["message" => "Materia creada correctamente"]);
     } 
@@ -67,8 +64,10 @@ function handlePost($conn)
 
 function handlePut($conn) 
 {
-    $input = json_decode(file_get_contents("php://input"), true);
-    if (updateSubject($conn, $input['id'], $input['name'])) 
+     $input = json_decode(file_get_contents("php://input"), true);
+
+    $result = updateSubject($conn, $input['id'], $input['name']);
+    if ($result['updated'] > 0) 
     {
         echo json_encode(["message" => "Materia actualizada correctamente"]);
     } 
@@ -81,8 +80,9 @@ function handlePut($conn)
 
 function handleDelete($conn) 
 {
-    $input = json_decode(file_get_contents("php://input"), true);
-    if (deleteSubject($conn, $input['id'])) 
+    $input = json_decode(file_get_contents("php://input"), true);  
+    $result = deleteSubject($conn, $input['id']);
+    if ($result['deleted'] > 0) 
     {
         echo json_encode(["message" => "Materia eliminada correctamente"]);
     } 

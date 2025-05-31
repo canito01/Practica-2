@@ -1,15 +1,27 @@
 <?php
+
+/*
+    Este archivo representa la capa de acceso a datos (modelo) para la arquitectura de la aplicación.
+    No tiene logica de interfaz ni control de flujo, solo contiene funciones que interactúan con la base de datos.
+*/
+
 function assignSubjectToStudent($conn, $student_id, $subject_id, $approved) 
 {
     $sql = "INSERT INTO students_subjects (student_id, subject_id, approved) VALUES (?, ?, ?)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("iii", $student_id, $subject_id, $approved);
-    return $stmt->execute();
+    $stmt->execute();
+
+    return 
+    [
+        'inserted' => $stmt->affected_rows,        
+        'id' => $conn->insert_id
+    ];
 }
 
 function getAllSubjectsStudents($conn) 
 {
-    $sql = "SELECT students_subjects.id,
+     $sql = "SELECT students_subjects.id,
                 students_subjects.student_id,
                 students_subjects.subject_id,
                 students_subjects.approved,
@@ -18,10 +30,11 @@ function getAllSubjectsStudents($conn)
             FROM students_subjects
             JOIN subjects ON students_subjects.subject_id = subjects.id
             JOIN students ON students_subjects.student_id = students.id";
-            return $conn->query($sql);
+
+    return $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
 }
 
-function getSubjectsByStudent($conn, $student_id) 
+function getSubjectsByStudent($conn, $student_id) //no usada, es un filtro por estudiante
 {
     $sql = "SELECT ss.subject_id, s.name, ss.approved
         FROM students_subjects ss
@@ -30,7 +43,9 @@ function getSubjectsByStudent($conn, $student_id)
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
-    return $stmt->get_result();
+    $result= $stmt->get_result();
+
+    return $result->fetch_all(MYSQLI_ASSOC); 
 }
 
 function updateStudentSubject($conn, $id, $student_id, $subject_id, $approved) 
@@ -40,14 +55,17 @@ function updateStudentSubject($conn, $id, $student_id, $subject_id, $approved)
             WHERE id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("iiii", $student_id, $subject_id, $approved, $id);
-    return $stmt->execute();
-}
+    $stmt->execute();
+
+    return ['updated' => $stmt->affected_rows];
 
 function removeStudentSubject($conn, $id) 
 {
     $sql = "DELETE FROM students_subjects WHERE id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $id);
-    return $stmt->execute();
+    $stmt->execute();
+
+    return ['deleted' => $stmt->affected_rows];
 }
 ?>
