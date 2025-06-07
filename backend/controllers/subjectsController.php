@@ -17,39 +17,10 @@ function handleGet($conn)
     }
 }
 
-/*function handlePost($conn) 
-{
-    $input = json_decode(file_get_contents("php://input"), true);
-    if (createSubject($conn, $input['name'])) 
-    {
-        echo json_encode(["message" => "Materia creada correctamente"]);
-    } 
-    else 
-    {
-        http_response_code(500);
-        echo json_encode(["error" => "No se pudo crear"]);
-    }
-}*/
 function handlePost($conn) 
 {
     $input = json_decode(file_get_contents("php://input"), true);
     $result = createSubject($conn, $input['name']);
-    
-    /*
-    stmt es una variable que contiene la consulta preparada
-    $stmt = $conn->prepare("SELECT id FROM subjects WHERE LOWER(name) = LOWER(?)");  // Verificar si ya existe una materia con ese nombre 
-    //la funcion lower convierte el nombre a minusculas para evitar problemas de mayusculas y minusculas
-    $stmt->bind_param("s", $nombre); // ayuda a evitar inyecciones SQL ya que solo se permite un string como parametro
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) //encontro una coincidencia
-    {
-        http_response_code(400); 
-        echo json_encode(["error" => "Ya existe una materia con ese nombre"]);
-        return;
-    }*/
-
 
     if ($result['inserted'] > 0) 
     {
@@ -81,6 +52,16 @@ function handlePut($conn)
 function handleDelete($conn) 
 {
     $input = json_decode(file_get_contents("php://input"), true);  
+
+    $subjectId = $input['subject_id'];
+
+    if (subjectHasStudents($conn, $subjectId)) //significa que encontró una relación existente
+    {
+        http_response_code(400);
+        echo json_encode(["error" => "No se puede eliminarla materia porque hay estudiantes asignados a esta materia"]);
+        return;
+    }
+
     $result = deleteSubject($conn, $input['id']);
     if ($result['deleted'] > 0) 
     {

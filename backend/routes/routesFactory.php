@@ -1,40 +1,36 @@
-<?
-/*
-    Es como un despachador de rutas. Recibe las peticiones HTTP y llama a la funcion que las maneja
-    Tiene un comportamiento por defecto (basado en nombre como handleGet, handlePost, etc.)
-    Puede ser personalizado para casos especiales, por ejemplo validaciones POST
-    Devuelve errores en formato JSON y con codigos HTTP estandarizados
-*/
+<?php
 
-//Se encarga de gestionar las rutas REST(CRUD) Y de conectar cada metodo HTTP con la funcion correspondiente
 
-function routeRequest($conn, $customHandlers = [], $prefix = 'handle')  //permite que la funcion funcione igual en todos los modulos, pero tambien puede ser personalozizada para un modulo en particular
+//despachador de rutas, como el primero que hicimos que se llamaba routesdispatcher
+//enruta las peticiones HTTP a los handlers correspondientes
+function routeRequest($conn, $customHandlers = [], $prefix = 'handle') //recibe un array de handlers personalizados 
 {
-    $method = $_SERVER['REQUEST_METHOD']; //php guarda los datos del servidor en la variable superglobal $_SERVER, y el metodo HTTP se guarda en la clave REQUEST_METHOD
+    $method = $_SERVER['REQUEST_METHOD'];
+    //PHP guarda automáticamente los datos del servidor en el arreglo global $_SERVER
 
     // Lista de handlers CRUD por defecto
     $defaultHandlers = [
-        'GET'    => $prefix . 'Get',
+        'GET'    => $prefix . 'Get', //necesita el $prefix para los proximos customizados
         'POST'   => $prefix . 'Post',
         'PUT'    => $prefix . 'Put',
         'DELETE' => $prefix . 'Delete'
     ];
 
-    // Sobrescribir handlers por defecto si hay personalizados, por ejemplo, la modificacion de la funcion post que  hicimos en studentsRoutes.php
+    // Sobrescribir handlers por defecto si hay personalizados
     $handlers = array_merge($defaultHandlers, $customHandlers);
 
-    if (!isset($handlers[$method])) 
+    if (!isset($handlers[$method]))//valida si el metodo es soportado 
     {
         http_response_code(405);
         echo json_encode(["error" => "Método $method no permitido"]);
         return;
     }
- 
-    $handler = $handlers[$method];  
 
-    if (is_callable($handler)) 
+    $handler = $handlers[$method]; //guarda el nombre de la funcion que debe ejecutarse segun el metodo solicitado
+
+    if (is_callable($handler)) //si existe una funcion con el nombre del handler, es decir que maneje ese metodo
     {
-        $handler($conn);
+        $handler($conn);//llama a la funcion que maneja el metodo con la conexion a la base de datos
     }
     else
     {

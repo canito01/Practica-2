@@ -1,29 +1,39 @@
 <?php
-require_once("./config/databaseConfig.php"); //datos de conexión a la base de datos
-require_once("./routes/routesFactory.php"); //contiene la función routeRequest que maneja las rutas para get, post, put y delete
-require_once("./controllers/studentsController.php"); //contiene funciones como handleget, handlepost,etc que hacen el trabajo real de manejar las solicitudes
 
-// routeRequest($conn);
 
+require_once("./config/databaseConfig.php");
+require_once("./routes/routesFactory.php");
+require_once("./controllers/studentsController.php");
+
+//Actúa como un "puente" entre la solicitud que llega del frontend y el controlador que se encarga de procesarla
+
+routeRequest($conn);
 
 /**
- * Ejemplo de como se extiende un archivo de rutas 
- * para casos particulares
- * o validaciones:
+ * switch ($_SERVER['REQUEST_METHOD']) ya no es necesario
+ * su funcion es la misma que la de routesFactory
+ * es apto a handlers customizados 
  */
-routeRequest($conn, [
-    'POST' => function($conn) 
+
+ 
+/**
+ * Ejemplo de como se extiende un archivo de rutas 
+ * para casos particulares o validaciones:
+ */
+
+/* routeRequest($conn, [
+    'POST' => function($conn) //si la solicitud http es post, sucede esta validacion
     {
         // Validación o lógica extendida
         $input = json_decode(file_get_contents("php://input"), true);
         if (empty($input['fullname'])) 
         {
             http_response_code(400);
-            echo json_encode(["error" => "Falta el nombre"]);
+            echo json_encode(["error" => "Falta el nombre"]);//esto es solo en caso de que no hayan puesto el nombre
             return;
         }
         handlePost($conn);
     }
 ]);
-
+*/
 ?>

@@ -1,10 +1,10 @@
 <?php
 
-/*
-    Se ejecuta automaticamente en todos los scripts del backend que necesiten conectarse a la base de datos.
-    Define los datos de conexión
-    Intenta conectarse usando new mysqli()
-    Si la conexión falla, envía un mensaje de error y termina la ejecución del script.
+/** 
+    *Se ejecuta automaticamente en todos los scripts del backend que necesiten conectarse a la base de datos.
+    *Define los datos de conexión
+    *Intenta conectarse usando new mysqli()
+    *Si la conexión falla, envía un mensaje de error y termina la ejecución del script.
 */
 
 

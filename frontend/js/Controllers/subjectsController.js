@@ -126,10 +126,11 @@ async function confirmDeleteSubject(id)
         existingRelations.forEach(rel => console.log(rel, "relacion existente"));
 
         const SubjectIsRelated = existingRelations.some(rel => rel.id === id);
-        console.log(id, "asdasdasd" );
-        console.log("SE QUEDA AFUERA DE LA FUNCIÓN");
-        console.log(SubjectIsRelated, "asdasdad");
-        console.log(existingRelations, "aaaa");
+
+
+        //console.log(id, "asdasdasd" );
+        //console.log("SE QUEDA AFUERA DE LA FUNCIÓN");
+        //console.log(SubjectIsRelated, "asdasdad");
 
 
         if (SubjectIsRelated)
